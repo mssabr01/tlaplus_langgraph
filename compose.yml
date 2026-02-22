@@ -1,0 +1,15 @@
+services:
+  tla-agent:
+    build: .
+    volumes:
+      # Mount specs output directory
+      - ./specs:/workspace/specs
+      # Pipeline source (for development - live reload)
+      - ./pipeline:/workspace/pipeline
+      # Persist Claude Code auth
+      - claude-config:/root/.claude
+    stdin_open: true
+    tty: true
+
+volumes:
+  claude-config:
