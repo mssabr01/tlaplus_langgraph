@@ -2,14 +2,22 @@ services:
   tla-agent:
     build: .
     volumes:
-      # Mount specs output directory
+      # Pipeline output
       - ./specs:/workspace/specs
-      # Pipeline source (for development - live reload)
-      - ./pipeline:/workspace/pipeline
-      # Persist Claude Code auth
+      # Pipeline source (live reload in development)
+      - ./workspace/pipeline:/workspace/pipeline
+      # Documentation input
+      - ./workspace/docs:/workspace/docs
+      # Exemplar specs for few-shot guidance
+      - ./workspace/exemplars:/workspace/exemplars
+      # Evaluation harness
+      - ./workspace/evals:/workspace/evals
+      # Persist Claude Code auth between runs
       - claude-config:/root/.claude
     stdin_open: true
     tty: true
+    environment:
+      - TLC_TIMEOUT=300
 
 volumes:
   claude-config:

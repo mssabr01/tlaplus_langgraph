@@ -1,0 +1,64 @@
+{
+  "name": "Uniswap V2 Swap Correctness",
+  "description": "Properties a correct swap specification must verify",
+  "required_invariants": [
+    {
+      "name": "TypeOK",
+      "description": "All variables constrained to finite domains",
+      "category": "type_safety"
+    },
+    {
+      "name": "ConstantProductInvariant",
+      "description": "reserve0 * reserve1 >= k after every swap (modulo fees)",
+      "category": "safety"
+    },
+    {
+      "name": "NonNegativeReserves",
+      "description": "Both reserves are always >= 0",
+      "category": "safety"
+    },
+    {
+      "name": "NoFreeTokens",
+      "description": "A swap cannot increase user balance of both tokens simultaneously",
+      "category": "safety"
+    },
+    {
+      "name": "ConservationOfTokens",
+      "description": "Total supply across all holders + reserves is constant",
+      "category": "safety"
+    }
+  ],
+  "optional_invariants": [
+    {
+      "name": "SwapMonotonicity",
+      "description": "Larger input always yields larger output",
+      "category": "safety"
+    },
+    {
+      "name": "OracleProgressLiveness",
+      "description": "Cumulative price oracle eventually updates",
+      "category": "liveness"
+    }
+  ],
+  "known_bugs": [
+    {
+      "file": "known_bugs/missing_k_check.tla",
+      "description": "Swap action does not enforce constant product formula",
+      "should_violate": "ConstantProductInvariant"
+    },
+    {
+      "file": "known_bugs/negative_balance.tla",
+      "description": "Swap allows withdrawing more than reserves hold",
+      "should_violate": "TypeOK"
+    },
+    {
+      "file": "known_bugs/free_tokens.tla",
+      "description": "Swap outputs tokens without requiring input",
+      "should_violate": "NoFreeTokens"
+    }
+  ],
+  "tlc_constraints": {
+    "max_states": 200000,
+    "max_time_seconds": 120
+  }
+}

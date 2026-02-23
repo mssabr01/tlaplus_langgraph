@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Claude auth & agent workspace
+.claude/
+/tmp/pipeline_workspace/
+
+# Pipeline outputs (regenerated on each run)
+specs/
+
+# TLA+ toolbox artifacts
+*.toolbox/
+
+# Node
+node_modules/
+
+# Exemplars are user-provided, track the directory but not contents
+workspace/exemplars/*.tla
+!workspace/exemplars/README.md
