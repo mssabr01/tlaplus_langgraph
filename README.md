@@ -34,20 +34,51 @@ Six pipeline nodes, orchestrated by LangGraph:
 
 Maximum 3 full revision loops. All intermediate artifacts saved to `history/`.
 
-## Usage
+### File-based prompt delivery
+
+All large content (documentation, specs, feedback) is written to `/tmp/pipeline_workspace/` as files. Each Claude sub-agent receives a short prompt referencing file paths and uses the `Read` tool to access them. System prompts are also written to files. This avoids the OS ARG_MAX (~2MB) limit on subprocess CLI arguments that the Claude Agent SDK uses internally.
+
+## Setup
+
+### Authentication
+
+The pipeline uses your Claude subscription quota via OAuth — not the paid API. Authenticate inside the container once; credentials persist via a Docker volume:
 
 ```bash
-# Single documentation file
-python workspace/pipeline/main.py path/to/docs.md ./specs
-
-# Documentation directory (recursive, reads all .md/.txt/.rst)
-python workspace/pipeline/main.py workspace/docs/ ./specs
-
-# With exemplar specs for few-shot guidance
-python workspace/pipeline/main.py workspace/docs/ ./specs ./workspace/exemplars/
+docker compose run --rm tla-agent claude auth login
 ```
 
-### Output
+### Docker
+
+```bash
+# Build and run the pipeline
+docker compose run --rm tla-agent
+
+# Open a shell for debugging
+docker compose run --rm tla-agent bash
+```
+
+The compose service mounts `./specs` for output, `./workspace/pipeline` for live code reload, and a named volume for Claude auth persistence.
+
+### Running directly (without Docker)
+
+Requires Python 3.12+, Java 21+, Node.js 22+, and `tla2tools.jar` on the classpath.
+
+```bash
+pip install -r requirements.txt
+python workspace/pipeline/main.py <docs_path> [output_path] [exemplar_dir]
+```
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAUDE_MODEL` | `claude-sonnet-4-5` | Model for sub-agents |
+| `CLAUDE_MAX_RETRIES` | `5` | Retry attempts on rate limit / empty response |
+| `CLAUDE_RETRY_DELAY` | `60` | Base delay (seconds) between retries (multiplied by attempt) |
+| `TLC_TIMEOUT` | `300` | TLC model checker timeout (seconds) |
+
+## Output
 
 ```
 specs/
@@ -65,12 +96,6 @@ specs/
       meta.json        # TLC stats, counterexample
     rev_1/
       ...
-```
-
-### Docker
-
-```bash
-docker compose up --build
 ```
 
 ## State Explosion Prevention
@@ -121,29 +146,6 @@ A spec that passes Tier 1 but catches 0/3 mutants has weak invariants. A spec th
 python workspace/evals/run_eval.py ./specs ./workspace/evals/uniswap_swap
 ```
 
-Output:
-
-```
-=== Tier 1: Binary Pass/Fail ===
-  SANY parses:         True
-  TLC runs:            True
-  TypeOK holds:        True
-  All invariants hold: True
-
-=== Tier 2: Quantitative Metrics ===
-  Distinct states:  4,218
-  Depth:            12
-  TLC time (s):     0.8
-  Invariants:       3 ['TypeOK', 'ConstantProductInvariant', 'NoFreeTokens']
-
-=== Tier 3: Mutation Detection ===
-  Checklist coverage:  80%
-  Mutants detected: 3/3
-  Detection rate:   100%
-
-=== Overall Score: 0.95 ===
-```
-
 ### Overall score
 
 Weighted: 40% Tier 1 (all pass = 1.0) + 20% Tier 2 (state efficiency vs 100k target) + 40% Tier 3 (mutation detection rate).
@@ -186,14 +188,18 @@ workspace/evals/
 ## Project Structure
 
 ```
+├── .gitignore
 ├── README.md
 ├── Dockerfile
 ├── compose.yml
+├── requirements.txt
 └── workspace/
     ├── pipeline/
     │   ├── state.py          # PipelineState TypedDict
     │   ├── agents.py         # Agent prompts + node functions
-    │   └── main.py           # LangGraph orchestration + CLI
+    │   ├── main.py           # LangGraph orchestration + CLI
+    │   ├── claude_sdk.py     # Claude Agent SDK wrapper (retry, monkey-patches)
+    │   └── tlc_tools.py      # SANY, PlusCal, TLC subprocess wrappers
     ├── docs/                 # Input documentation
     ├── exemplars/            # Few-shot .tla reference specs
     └── evals/
